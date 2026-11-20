@@ -1,0 +1,21 @@
+# 换行符规则。
+#
+# 这台开发机开了 core.autocrlf=true（Windows 上的常见设置），
+# 意思是"提交时把 CRLF 归一成 LF，检出时再变回 CRLF"。
+# 对 Java 源码无所谓，但对**要拿到 Linux 上跑的脚本**是灾难：
+#
+#   gradlew 是个 sh 脚本。CRLF 版本在 Linux 上会挂在
+#       bad interpreter: /usr/bin/env bash^M
+#   而 ^M 是看不见的，报错信息也完全不提换行符——很容易查错方向。
+#
+# 所以在这里把规则钉死，不管谁的机器上 autocrlf 设成什么。
+# git 的 .gitattributes 优先级**高于** core.autocrlf。
+
+# 给 Linux / macOS 用的脚本，永远 LF
+gradlew   text eol=lf
+*.sh      text eol=lf
+
+# Windows 批处理反过来，必须是 CRLF（LF 的 .bat 在 cmd 里行为诡异）
+*.bat     text eol=crlf
+
+gradle/wrapper/gradle-wrapper.properties text eol=lf

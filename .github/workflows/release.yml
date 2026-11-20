@@ -1,0 +1,81 @@
+# 推一个 v 开头的 tag，云端就编译并把 APK 挂到 release 上。
+#
+# 为什么要走 CI 而不是本地编完手动上传：
+#   1. 本地这台是 Windows，编出来的 APK 只有我能验；CI 在干净的
+#      Linux 上从零编译，**能证明这个仓库是自洽的**——别人 clone
+#      下来照着 README 做，得到的是一模一样的东西
+#   2. 建 release、传附件都要 GitHub token。CI 里可以用系统自动
+#      发的临时 token，不需要任何人经手长期凭据
+#   3. 以后每发一版就是推一条 tag 的事
+#
+# 用法：
+#   git tag v0.1 && git push origin v0.1
+#
+# 也可以在 Actions 页面手动触发（那样只出构建产物，不发 release）。
+
+name: 构建 APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:        # 手动触发，方便测
+
+# 建 release 要写权限。默认的 token 是只读的，必须显式声明。
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 —— 和 app/build.gradle.kts 里的 sourceCompatibility 对齐
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 缓存 Gradle 的依赖下载。第一次跑会慢，之后快很多。
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: 编译 debug APK
+        # --no-daemon：CI 跑完进程就没了，留着守护进程没意义
+        run: ./gradlew assembleDebug --no-daemon
+
+      # 手动触发时不发 release，把产物挂成可下载的 artifact 就行
+      - name: （手动触发时）上传构建产物
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: （推 tag 时）发 release 并附上 APK
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          # 这是 GitHub 每次运行时自动发的临时 token，跑完就失效。
+          # 不需要任何人在仓库里存长期密钥。
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --title "$GITHUB_REF_NAME" \
+            --notes "自动编译的 **debug 版 APK**，用 Android 自带的调试密钥签名，手机上直接能装（不用特意卸载旧版，同一个签名能覆盖安装）。
+
+          **装之前先读 [README](https://github.com/${GITHUB_REPOSITORY}#readme)。**
+          这个 App 单独没有任何用处——它只是个客户端，得先有一个跑起来的
+          [time](https://github.com/YeahYe520/time) 服务在等着它连。
+
+          第一次打开会让你填三样：服务器地址、用户名（随便填）、口令
+          （主项目 \`.env\` 里的 \`APP_PASSWORD\`）。然后会依次弹日历和通知
+          两个权限框，按顺序给就行。
+
+          > debug 包不是给人长期用的：它比正式包大、没做代码混淆、
+          > 也不能上应用商店。自己用完全够。"
