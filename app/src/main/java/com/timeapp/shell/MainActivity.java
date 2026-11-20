@@ -66,8 +66,17 @@ public class MainActivity extends Activity {
     /** 两次同步之间的最小间隔。10 分钟。 */
     private static final long SYNC_THROTTLE_MS = 10L * 60 * 1000;
 
-    /** 第一次打开时预填的地址，省得在手机上敲一长串。 */
-    private static final String DEFAULT_URL = "http://192.168.1.100:8000";
+    /**
+     * 第一次打开时预填的地址。
+     *
+     * **故意留空。** 这个 App 要连的是"你自己的那台服务器"，
+     * 别人的地址对你毫无意义——预填一个具体地址只会让人以为是程序坏了
+     * （点连接连不上，又不知道为什么）。
+     *
+     * 留空的效果：首次启动直接弹设置面板，让你自己填。
+     * 这一步本来也躲不掉，因为口令也得填。
+     */
+    private static final String DEFAULT_URL = "";
 
     private WebView web;
     private View settingsPanel;
