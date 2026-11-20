@@ -1,0 +1,14 @@
+# 构建产物：每次编译都会重新生成，进仓库只会让 git status 变脏
+build/
+.gradle/
+
+# Android SDK 在哪台机器上不一样，不该提交
+local.properties
+
+# IDE 的东西
+.idea/
+*.iml
+
+# 打包出来的 APK
+*.apk
+*.aab

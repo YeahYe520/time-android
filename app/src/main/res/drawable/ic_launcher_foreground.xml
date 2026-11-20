@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  一个表盘，指向 3 点整。用矢量图（vector）画的，不是 PNG——
+  所以任何分辨率下都清晰，而且整个文件就是几行文字，能直接改。
+
+  pathData 里的坐标是在 108×108 的画布上：
+      M54,28      从正上方那个点开始
+      A26,26 ...  画一段半径 26 的圆弧到正下方
+      再画一段弧回到起点 —— 两段弧拼成一个整圆
+      （SVG 的圆弧没法一笔画 360 度，起止点重合的话会被当成"什么都不画"，
+        所以标准做法是拆成两段）
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 表盘外圈 -->
+    <path
+        android:pathData="M54,30 A24,24 0 1,1 54,78 A24,24 0 1,1 54,30"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000" />
+
+    <!-- 时针：从圆心往上 -->
+    <path
+        android:pathData="M54,54 L54,41"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- 分针：从圆心往右 -->
+    <path
+        android:pathData="M54,54 L67,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+</vector>

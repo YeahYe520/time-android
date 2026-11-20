@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      NoActionBar = 不要顶上那条标题栏。
+      有它的话 App 顶部会多一条灰带子写着"日程"，网页就被挤下去了——
+      我们要的是网页铺满整个屏幕。
+    -->
+    <style name="Theme.TimeShell" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

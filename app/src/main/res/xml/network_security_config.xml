@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  为什么需要这个文件？
+
+  安卓 9（API 28）以后，**App 里默认禁止明文 HTTP**。
+  你写 http:// 开头的网址，系统直接掐断，连请求都发不出去。
+  这是安卓推着所有人上 HTTPS 的手段。
+
+  我们这次跑的是局域网里的 http://192.168.1.100:8000，
+  所以必须显式开这个口子。
+
+  注意这是**整个 App 全局**放开。更稳妥的写法是把允许的域名列出来：
+
+      <domain-config cleartextTrafficPermitted="true">
+          <domain includeSubdomains="false">192.168.1.100</domain>
+      </domain-config>
+
+  但我们的地址是用户自己填的（而且 IP 会变），所以这里全局放开。
+  这是个**只有自己用、只连自己电脑**的 App 才能这么干——
+  真要发布给别人用，就得收紧到具体域名。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

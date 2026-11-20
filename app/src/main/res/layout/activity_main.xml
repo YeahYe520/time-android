@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FrameLayout = 叠罗汉布局：后面的盖在前面上。
+  顺序是 WebView（最底）→ 设置按钮 → 设置面板（最顶）。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!--
+      设置入口。半透明，不挡事。
+      **正式版会把它删掉**，地址直接写死在代码里——那才叫 App。
+      现在留着是因为你的局域网 IP 会变（DHCP 分的），
+      变了就得能改，不然每次都得重新打包。
+    -->
+    <TextView
+        android:id="@+id/gear"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:padding="12dp"
+        android:text="@string/settings"
+        android:textSize="12sp"
+        android:alpha="0.4" />
+
+    <!--
+      设置面板。**clickable 和 focusable 不是可有可无的。**
+
+      根布局是 FrameLayout，它派发触摸事件的顺序是**从后往前**遍历子视图
+      （settings → gear → WebView）。面板本身是个 gravity=center 的竖排，
+      上下两端各留了近 200dp 的空白；手指落在那些空白上时，面板里的控件
+      谁都不在那个位置，面板自己又没有 clickable，于是它**不消费**这个事件，
+      FrameLayout 就继续往下发——发给了底下被盖住的 WebView。
+
+      结果：手指点在看不见的网页上。点到 AI 输入框键盘会自己弹出来；
+      点到「完成」或日期的 ‹ › 会把事务标记完成、或者翻页。
+
+      给覆盖层加 clickable 让它**吃掉**落在自己身上的触摸，是 FrameLayout
+      做浮层的标准做法，不是补丁。
+    -->
+    <LinearLayout
+        android:id="@+id/settings"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="28dp"
+        android:background="@color/settings_bg"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/server_title"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:paddingBottom="18dp" />
+
+        <EditText
+            android:id="@+id/url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_url"
+            android:inputType="textUri"
+            android:autofillHints="" />
+
+        <EditText
+            android:id="@+id/user"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_user"
+            android:inputType="text"
+            android:autofillHints="" />
+
+        <EditText
+            android:id="@+id/pass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_pass"
+            android:inputType="textPassword"
+            android:autofillHints="" />
+
+        <Button
+            android:id="@+id/save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/connect" />
+
+        <TextView
+            android:id="@+id/hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="14dp"
+            android:textColor="@color/hint"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="22dp"
+            android:textColor="@color/hint"
+            android:textSize="12sp"
+            android:text="@string/footnote" />
+    </LinearLayout>
+</FrameLayout>

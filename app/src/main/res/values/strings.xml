@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  界面上所有文字都放这儿，不写死在布局文件里。
+  好处是以后要做多语言，只要再加一个 values-en/strings.xml 就行，
+  不用去每个布局文件里翻。
+-->
+<resources>
+    <string name="app_name">日程</string>
+    <string name="settings">设置</string>
+    <string name="server_title">连到哪台电脑</string>
+    <string name="hint_url">http://192.168.1.5:8000</string>
+    <string name="hint_user">用户名（随便填）</string>
+    <string name="hint_pass">口令</string>
+    <string name="connect">连接</string>
+    <string name="footnote">电脑上要先跑起来：\n.venv/Scripts/python.exe app.py --lan\n手机要和电脑连同一个 WiFi。</string>
+</resources>

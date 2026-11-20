@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  清单文件 = 这个 App 的身份证 + 权限声明。装到手机上时系统先读它。
+
+  注意：XML 注释里不能出现连续两个减号（解析器会把它们当成注释结束符），
+  所以下面凡是提到命令行参数的地方都绕着写。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 要联网就得声明。不声明的话 WebView 加载任何网址都直接失败。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      日历权限。**光在这里声明是不够的**——它们属于 dangerous 级别，
+      装完之后还得在运行时弹框问用户要。声明 + 运行时申请，两步都做完才算拿到。
+      （INTERNET 是 normal 级别，声明了就生效，不用问。）
+
+      两个都要：
+        READ  —— 查"日程"这本日历存不存在。只给 WRITE 的话，那次查询会抛 SecurityException。
+        WRITE —— 插事件、插提醒、清空。
+    -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!--
+      后台同步任务要求"重启后还在"（setPersisted）时，必须同时声明这个权限，
+      否则 schedule() 当场就报错。它也是 normal 级别，声明即可。
+      顺带：闹钟在重启后也需要靠它触发的广播来重排（见 RescheduleReceiver）。
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      ===== 高优先级事务响铃所需的权限 =====
+
+      精确闹钟有两个权限，**两个都要声明**，各管一段系统版本：
+
+        SCHEDULE_EXACT_ALARM + maxSdkVersion="32"
+            Android 12 / 12L（API 31、32）上用它。那时它是"安装即授予"的。
+            加了 maxSdkVersion 之后，Android 13+ 就不看它了——这一步很关键，
+            因为 Android 14 起"新装 App 声明了它会被默认拒绝"。
+
+        USE_EXACT_ALARM
+            Android 13+（API 33）才有。保护级别是 normal，**安装即授予、
+            用户不可撤销**，所以在这条路上是零摩擦的。
+
+      两个合起来：从 Android 8 到最新版，精确闹钟都不需要用户做任何操作。
+      代码里仍然会检测并降级（万一用户在 12/12L 上手动撤销了），但不能指望那个兜底。
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- targetSdk 28 起，启动前台服务必须有这个。 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!--
+      targetSdk 34 起，每一种前台服务类型还要有对应的权限。
+      缺了的话 startForeground() 抛 SecurityException，服务起不来、铃声不响。
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!--
+      Android 13+ 的运行时权限。
+
+      拒绝了会怎样：前台服务照跑、声音照响，但**通知栏上那条（连同"停止"按钮）
+      完全看不见**。所以代码里在锁屏上还留了一个"停止"页兜底
+      （RingActivity），不能只靠通知这一个入口。
+
+      minSdk 是 26，所以申请它的时候必须先判 SDK_INT >= 33。
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- MediaPlayer.setWakeMode(PARTIAL_WAKE_LOCK) 需要它。不声明又调用会抛 SecurityException。 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application
+        android:name=".TimeApp"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.TimeShell">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
+            <!--
+              configChanges：屏幕转了、键盘弹了，**不要重建这个 Activity**。
+              不写这行的话，手机一转屏整个 Activity 会被销毁重建，
+              网页跟着重新加载一遍——你会看到白屏闪一下、输入的东西全没了。
+              对纯网页壳来说，让它自己重排就好，没必要重建。
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          后台同步任务。
+
+          android:permission="android.permission.BIND_JOB_SERVICE" **必须写**。
+          关于漏写它会怎样，文档和实际行为是不一致的：官方文档说"会被忽略"，
+          但实际跑起来，漏了这行 schedule() 会当场抛 IllegalArgumentException。
+          照文档写会以为没事，照实际写才知道必须补上。
+
+          exported="true"：Google 的两个官方 JobService 样例都这么写。
+        -->
+        <service
+            android:name=".SyncJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
+
+        <!--
+          闹钟到点时回调这里。它是显式组件调用（Intent 里写了类名），
+          不需要 intent-filter；exported="false" 不影响同 App 内的投递，
+          但能挡住别的 App 伪造这个广播。
+        -->
+        <receiver
+            android:name=".RingReceiver"
+            android:exported="false" />
+
+        <!--
+          重启 / 改时间 / 改时区之后重排闹钟。
+
+          这三个 action 都在系统的"隐式广播豁免名单"里，所以静态注册在后台也收得到。
+          名单之外的（比如权限变更那个广播）收不到——所以"用户刚授权"那件事
+          不能靠广播兜底，得靠 MainActivity.onResume 复查。
+
+          exported="false" 只挡别的 App；系统广播照常投递。
+        -->
+        <receiver
+            android:name=".RescheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          响铃的前台服务。
+
+          foregroundServiceType="mediaPlayback" 是必须的（Android 14 起），
+          而且**必须和代码里 startForeground 传的类型一致**，否则抛
+          IllegalArgumentException（"must be a subset flags of what is
+          specified in manifest attribute"）。
+
+          mediaPlayback 这个类型的运行时前置条件是"无"，也不属于
+          while-in-use 那一类，所以后台可以创建它。
+        -->
+        <service
+            android:name=".RingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!--
+          响铃时弹出来的"停止"页。
+
+          showWhenLocked / turnScreenOn 是 API 27 才有的属性，在 26 上会被忽略，
+          无害——代码里另外设了两个废弃的 window flag 来覆盖旧系统。
+
+          theme 用系统自带的 DeviceDefault：这个页面出现的时机很突兀（正在响铃），
+          用系统主题反而不会显得格格不入。
+        -->
+        <activity
+            android:name=".RingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.DeviceDefault" />
+
+    </application>
+</manifest>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "自适应图标"（Android 8 引入）。它分两层：
+
+      背景层（background）—— 铺满
+      前景层（foreground）—— 中间那块
+
+  系统拿到这两层之后，**自己**按各家手机厂商的形状去裁：
+  小米裁成圆的、三星裁成方的、一加裁成水滴的……都行。
+  老式图标是一张画好的 PNG，被裁成圆形时四个角就没了；
+  自适应图标不会，因为裁的是两层，前景永远在安全区里。
+
+  代价：前景层画的东西必须待在中间 72×72 那块（108×108 的画布上），
+  不然会被裁掉。所以下面那个表盘画得比较小。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/icon_bg" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
